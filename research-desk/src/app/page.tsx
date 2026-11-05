@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import SubscriptionDesk from "@/components/SubscriptionDesk";
 import DeskChat from "@/components/DeskChat";
 import DeploymentsPanel from "@/components/DeploymentsPanel";
 import MemoryPanel from "@/components/MemoryPanel";
@@ -31,7 +32,7 @@ export default function Home() {
     try {
       const data = await api<DeskStatus>("/api/desk/status");
       setStatus(data);
-      if (!data.hello_provisioned) setView("setup");
+      if (!data.subscription_chat && !data.hello_provisioned) setView("setup");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -65,7 +66,7 @@ export default function Home() {
       <main>
         {error && <div className="error-note">{error}</div>}
         {!status && !error && <div className="empty">Waking the desk up…</div>}
-        {status && view === "desk" && <DeskChat provisioned={chatReady} />}
+        {status && view === "desk" && (status.subscription_chat ? <SubscriptionDesk /> : <DeskChat provisioned={chatReady} />)}
         {status && view === "scorecards" && <ScorecardsPanel provisioned={provisioned} />}
         {status && view === "memory" && <MemoryPanel provisioned={provisioned} />}
         {status && view === "deployments" && <DeploymentsPanel provisioned={provisioned} />}

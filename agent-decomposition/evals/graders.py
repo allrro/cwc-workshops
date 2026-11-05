@@ -3,6 +3,7 @@
 """Graders for StockPilot evals. Each returns (status, why) where status ∈ {pass, fail, pass-slow}."""
 from __future__ import annotations
 import csv
+import json
 import os
 import re
 from pathlib import Path
@@ -12,7 +13,7 @@ import anthropic
 
 DATA = Path(__file__).parent.parent / "data"
 SKU_RE = re.compile(r"SKU-\d{4}")
-SUP_RE = re.compile(r"SUP-\d{2}")
+SUP_RE = re.compile(r"\bSUP-\d+\b")
 NUM_RE = re.compile(r"(\d[\d,]*\.?\d*)")
 
 
@@ -101,10 +102,53 @@ def exact_match(result, spec) -> tuple[str, str]:
     return FAIL, f"expected {target}, got {nums[:3] or 'none'}"
 
 
+def supplier_match(text: str, spec: dict) -> tuple[str, str]:
+    approved = _expected_value(spec)
+    with open(DATA / "suppliers.csv") as f:
+        master = {row["supplier_id"]: row for row in csv.DictReader(f)}
+    text = text.strip()
+    if text.startswith("```") and text.endswith("```"):
+        text = text.partition("\n")[2][:-3].strip()
+    try:
+        rows = json.loads(text)
+    except json.JSONDecodeError:
+        if text.startswith(("[", "{")):
+            return FAIL, "invalid supplier JSON"
+        # Older R4 prompts requested prose. Accept explicit ID / "N days" pairs.
+        parts = re.split(f"({SUP_RE.pattern})", text)
+        rows = []
+        for supplier, description in zip(parts[1::2], parts[2::2]):
+            days = re.findall(r"(?<![\d.+-])(\d+)\s*(?:business\s+)?days?\b", description, re.I)
+            if len(days) != 1:
+                return FAIL, f"expected one lead time for {supplier}"
+            rows.append({"supplier_id": supplier, "lead_time_days": int(days[0])})
+
+    if not isinstance(rows, list):
+        return FAIL, "expected a list of suppliers"
+    seen = set()
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("supplier_id"), str):
+            return FAIL, "missing supplier_id"
+        supplier = row["supplier_id"]
+        if supplier not in approved or supplier in seen:
+            return FAIL, f"unexpected or duplicate supplier {supplier}"
+        seen.add(supplier)
+        record = master[supplier]
+        days = row.get("lead_time_days")
+        if type(days) is not int or days != int(record["lead_time_days"]):
+            return FAIL, f"incorrect or missing lead time for {supplier}"
+        if "name" in row and row["name"] != record["name"]:
+            return FAIL, f"incorrect name for {supplier}"
+    if seen != approved:
+        return FAIL, f"missing suppliers {sorted(approved - seen)}"
+    return PASS, ""
+
+
 def set_match(result, spec) -> tuple[str, str]:
+    if spec.get("source") == "suppliers_for":
+        return supplier_match(result.final_text, spec)
     target = _expected_value(spec)
-    pattern = SUP_RE if spec.get("source") == "suppliers_for" else SKU_RE
-    found = set(pattern.findall(result.final_text))
+    found = set(SKU_RE.findall(result.final_text))
     missing = target - found
     extra = found - target
     if not missing:

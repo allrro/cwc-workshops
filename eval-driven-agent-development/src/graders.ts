@@ -16,21 +16,9 @@
 export type { Grader, GraderContext } from "./graders/types.js";
 import type { Grader } from "./graders/types.js";
 
-export const GRADERS: Grader[] = [
-    {
-        name: "Produced result",
-        kind: "code",
-        description: "Did the agent produce a valid .pptx at all?",
-        grade(ctx) {
-            if (!ctx.parsedPptx.exists) {
-                return "missing";
-            }
-            if (!ctx.parsedPptx.validZip) {
-                return "invalid";
-            }
-            return "ok";
-        },
-    },
+import { producedResult } from "./graders/code/produced-result.js";
 
+export const GRADERS: Grader[] = [
+    producedResult,
     // more graders...
 ];

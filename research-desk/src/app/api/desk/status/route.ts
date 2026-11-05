@@ -40,6 +40,7 @@ export async function GET() {
     ].filter((resource): resource is ResourceLink => resource !== null);
 
     return {
+      subscription_chat: process.env.DESK_CHATGPT === "1",
       provisioned: isProvisioned(config),
       hello_provisioned: isHelloProvisioned(config),
       config,

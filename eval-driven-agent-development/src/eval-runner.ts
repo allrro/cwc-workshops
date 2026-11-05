@@ -57,7 +57,7 @@ async function buildContext(
     // Render the deck to one JPG per slide via the local Docker image, so
     // the vision-judge graders have pixels to look at.
     let jpgs: string[] = [];
-    if (parsed.exists && parsed.validZip) {
+    if (parsed.validPresentation) {
         const renderDir = path.join(taskDir, "render");
         // Always re-render — a stale render/ from a previous output.pptx would
         // mean the judge scores the old deck.

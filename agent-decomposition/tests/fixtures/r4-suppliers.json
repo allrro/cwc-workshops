@@ -1,0 +1,4 @@
+[
+  {"supplier_id": "SUP-01", "name": "Cascade Distribution", "lead_time_days": 10},
+  {"supplier_id": "SUP-06", "name": "Northface Logistics", "lead_time_days": 5}
+]

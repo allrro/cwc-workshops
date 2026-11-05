@@ -113,7 +113,7 @@ Nothing during an event requires shell access or a redeploy.
 cd event && npm install && node server.mjs
 # cast view:    http://localhost:8888
 # admin panel:  http://localhost:8888/admin   (no keys set = open access)
-node test/smoke.mjs   # full API/relay/MCP test suite
+npm test   # full API/relay/MCP test suite
 ```
 
 ## Scale
