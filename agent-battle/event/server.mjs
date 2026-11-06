@@ -457,7 +457,7 @@ app.use((req, res, next) => {
 });
 
 // ── start ─────────────────────────────────────────────────────────────
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, process.env.BIND_ADDRESS, () => {
   console.log(`[event] Agent Battle event server on :${PORT}`);
   console.log(`[event]   cast view    http://localhost:${PORT}/`);
   console.log(`[event]   admin panel  http://localhost:${PORT}/admin`);

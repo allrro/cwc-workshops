@@ -24,7 +24,7 @@ tasks:
 
   - id: R4
     name: Supplier lead times
-    prompt: "Who are the approved suppliers for SKU-0088 and what are their lead times?"
+    prompt: "Who are the approved suppliers for SKU-0088 and what are their lead times? Return a JSON array with supplier_id, name and integer lead_time_days for each approved supplier."
     grader: set_match
     expected: { source: suppliers_for, sku: SKU-0088 }
     tags: [regression, join]

@@ -4,6 +4,7 @@
 /** Types and small helpers shared by the browser components. */
 
 export interface DeskStatus {
+  subscription_chat: boolean;
   provisioned: boolean;
   hello_provisioned: boolean;
   config: Record<string, string>;

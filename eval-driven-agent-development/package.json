@@ -4,6 +4,8 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
     "create-slides": "dotenv -o -e .env -- tsx src/create-slides.ts",
     "render": "tsx src/render.ts",
     "eval": "FORCE_COLOR=3 dotenv -o -e .env -- tsx src/eval-runner.ts",

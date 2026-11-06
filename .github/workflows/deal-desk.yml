@@ -1,0 +1,39 @@
+name: Deal Desk types
+
+on:
+  push:
+    paths:
+      - 'production-ready-agent/**'
+      - '.github/workflows/deal-desk.yml'
+  pull_request:
+    paths:
+      - 'production-ready-agent/**'
+      - '.github/workflows/deal-desk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck:
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [starter, solution]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: production-ready-agent/${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.4.4'
+      - run: bun install --no-save
+      - run: bun run next typegen
+      - run: bun run typecheck

@@ -18,15 +18,26 @@ import { spawn } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
 import WebSocket from 'ws';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PORT = 8899;
-const BASE = `http://localhost:${PORT}`;
+const HOST = '127.0.0.1';
+// Use the same available loopback port for both runs of the persistence test.
+const probe = createServer();
+const PORT = await new Promise((resolve, reject) => {
+  probe.once('error', reject);
+  probe.listen(0, HOST, () => {
+    const port = probe.address().port;
+    probe.close(err => err ? reject(err) : resolve(port));
+  });
+});
+const BASE = `http://${HOST}:${PORT}`;
 const WORKSHOP_KEY = 'test-workshop-key';
 const ADMIN_KEY = 'test-admin-key';
-const DATA_DIR = join(__dirname, '.smoke-data');
+const DATA_DIR = mkdtempSync(join(tmpdir(), 'agent-battle-smoke-'));
 
 let failures = 0;
 function check(name, cond, detail = '') {
@@ -87,12 +98,12 @@ async function mcpInitThenCall(path, callName, callArgs, extraHeaders = {}) {
 }
 
 // ── start server ──────────────────────────────────────────────────────
-rmSync(DATA_DIR, { recursive: true, force: true });
 console.log('starting event server on :' + PORT);
 const server = spawn('node', [join(__dirname, '..', 'server.mjs')], {
   env: {
     ...process.env,
     PORT: String(PORT),
+    BIND_ADDRESS: HOST,
     WORKSHOP_KEY,
     ADMIN_KEY,
     DATA_DIR,
@@ -110,6 +121,7 @@ try {
   let up = false;
   for (let i = 0; i < 30; i++) {
     await sleep(250);
+    if (server.exitCode !== null) throw new Error(`server exited during startup: ${server.exitCode}`);
     try {
       const r = await fetch(`${BASE}/healthz`);
       if (r.ok) { up = true; break; }
@@ -221,7 +233,7 @@ try {
     && offline.tools.result.tools.length === 0);
 
   // Registration without the workshop key must be rejected
-  const wsBad = new WebSocket(`ws://localhost:${PORT}/relay/ws`);
+  const wsBad = new WebSocket(`ws://${HOST}:${PORT}/relay/ws`);
   const badReply = await new Promise((resolve) => {
     wsBad.on('open', () => wsBad.send(JSON.stringify({
       type: 'register', participant: 'evil', key: 'attacker-key-12345678', tools: [],
@@ -242,7 +254,7 @@ try {
     { name: 'get_state', description: 'state', inputSchema: { type: 'object', properties: {} } },
     { name: 'mine_block', description: 'mine', inputSchema: { type: 'object', properties: { name: { type: 'string' } } } },
   ];
-  const ws = new WebSocket(`ws://localhost:${PORT}/relay/ws`);
+  const ws = new WebSocket(`ws://${HOST}:${PORT}/relay/ws`);
   const registered = new Promise((resolve) => {
     ws.on('open', () => ws.send(JSON.stringify({
       type: 'register', participant: 'smokebot', key: KEY, tools: FAKE_TOOLS,
@@ -337,7 +349,7 @@ try {
   server.kill('SIGTERM');
   await sleep(1000);
   const server2 = spawn('node', [join(__dirname, '..', 'server.mjs')], {
-    env: { ...process.env, PORT: String(PORT), WORKSHOP_KEY, ADMIN_KEY, DATA_DIR },
+    env: { ...process.env, PORT: String(PORT), BIND_ADDRESS: HOST, WORKSHOP_KEY, ADMIN_KEY, DATA_DIR },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   try {

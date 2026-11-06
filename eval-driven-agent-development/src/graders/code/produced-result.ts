@@ -12,7 +12,7 @@ export const producedResult: Grader = {
         if (!p.exists) {
             return "missing";
         }
-        if (!p.validZip) {
+        if (!p.validPresentation) {
             return "invalid";
         }
         return "ok";
